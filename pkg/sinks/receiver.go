@@ -4,28 +4,29 @@ import "errors"
 
 // Receiver allows receiving
 type ReceiverConfig struct {
-	Name          string               `yaml:"name"`
-	InMemory      *InMemoryConfig      `yaml:"inMemory"`
-	Webhook       *WebhookConfig       `yaml:"webhook"`
-	File          *FileConfig          `yaml:"file"`
-	Syslog        *SyslogConfig        `yaml:"syslog"`
-	Stdout        *StdoutConfig        `yaml:"stdout"`
-	Elasticsearch *ElasticsearchConfig `yaml:"elasticsearch"`
-	Kinesis       *KinesisConfig       `yaml:"kinesis"`
-	Firehose      *FirehoseConfig      `yaml:"firehose"`
-	OpenSearch    *OpenSearchConfig    `yaml:"opensearch"`
-	Opsgenie      *OpsgenieConfig      `yaml:"opsgenie"`
-	Loki          *LokiConfig          `yaml:"loki"`
-	SQS           *SQSConfig           `yaml:"sqs"`
-	SNS           *SNSConfig           `yaml:"sns"`
-	Slack         *SlackConfig         `yaml:"slack"`
-	Kafka         *KafkaConfig         `yaml:"kafka"`
-	Pubsub        *PubsubConfig        `yaml:"pubsub"`
-	Opscenter     *OpsCenterConfig     `yaml:"opscenter"`
-	Teams         *TeamsConfig         `yaml:"teams"`
-	BigQuery      *BigQueryConfig      `yaml:"bigquery"`
-	EventBridge   *EventBridgeConfig   `yaml:"eventbridge"`
-	Pipe          *PipeConfig          `yaml:"pipe"`
+	Name              string                   `yaml:"name"`
+	InMemory          *InMemoryConfig          `yaml:"inMemory"`
+	Webhook           *WebhookConfig           `yaml:"webhook"`
+	File              *FileConfig              `yaml:"file"`
+	Syslog            *SyslogConfig            `yaml:"syslog"`
+	Stdout            *StdoutConfig            `yaml:"stdout"`
+	Elasticsearch     *ElasticsearchConfig     `yaml:"elasticsearch"`
+	Kinesis           *KinesisConfig           `yaml:"kinesis"`
+	Firehose          *FirehoseConfig          `yaml:"firehose"`
+	OpenSearch        *OpenSearchConfig        `yaml:"opensearch"`
+	Opsgenie          *OpsgenieConfig          `yaml:"opsgenie"`
+	Loki              *LokiConfig              `yaml:"loki"`
+	SQS               *SQSConfig               `yaml:"sqs"`
+	SNS               *SNSConfig               `yaml:"sns"`
+	Slack             *SlackConfig             `yaml:"slack"`
+	Kafka             *KafkaConfig             `yaml:"kafka"`
+	Pubsub            *PubsubConfig            `yaml:"pubsub"`
+	Opscenter         *OpsCenterConfig         `yaml:"opscenter"`
+	Teams             *TeamsConfig             `yaml:"teams"`
+	BigQuery          *BigQueryConfig          `yaml:"bigquery"`
+	EventBridge       *EventBridgeConfig       `yaml:"eventbridge"`
+	Pipe              *PipeConfig              `yaml:"pipe"`
+	AzureStorageTable *AzureStorageTableConfig `yaml:"azsttable"`
 }
 
 func (r *ReceiverConfig) Validate() error {
@@ -120,6 +121,10 @@ func (r *ReceiverConfig) GetSink() (Sink, error) {
 
 	if r.Loki != nil {
 		return NewLoki(r.Loki)
+	}
+
+	if r.AzureStorageTable != nil {
+		return NewAzureStorageTable(r.AzureStorageTable)
 	}
 
 	return nil, errors.New("unknown sink")
