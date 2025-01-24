@@ -8,18 +8,32 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"text/template"
 
+	"github.com/Masterminds/sprig/v3"
 	"github.com/resmoio/kubernetes-event-exporter/pkg/kube"
 )
 
 type TeamsConfig struct {
-	Endpoint string                 `yaml:"endpoint"`
-	Layout   map[string]interface{} `yaml:"layout"`
-	Headers  map[string]string      `yaml:"headers"`
+	Endpoint        string                 `yaml:"endpoint"`
+	Layout          map[string]interface{} `yaml:"layout"`
+	Headers         map[string]string      `yaml:"headers"`
+	MessageTemplate string                 `yaml:"messageTemplate"`
+	messageTmpl     *template.Template
 }
 
 func NewTeamsSink(cfg *TeamsConfig) (Sink, error) {
-	return &Teams{cfg: cfg}, nil
+
+	teams := &Teams{cfg: cfg}
+	if cfg.MessageTemplate != "" {
+		tmpl, err := template.New("template").Funcs(sprig.TxtFuncMap()).Parse(cfg.MessageTemplate)
+		if err != nil {
+			return nil, err
+		}
+		teams.cfg.messageTmpl = tmpl
+	}
+
+	return teams, nil
 }
 
 type Teams struct {
@@ -31,21 +45,32 @@ func (w *Teams) Close() {
 }
 
 func (w *Teams) Send(ctx context.Context, ev *kube.EnhancedEvent) error {
-	event, err := serializeEventWithLayout(w.cfg.Layout, ev)
-	if err != nil {
-		return err
-	}
+	var reqBody []byte
 
-	var eventData map[string]interface{}
-	json.Unmarshal([]byte(event), &eventData)
-	output := fmt.Sprintf("Event: %s \nStatus: %s \nMetadata: %s", eventData["message"], eventData["reason"], eventData["metadata"])
+	if w.cfg.messageTmpl == nil {
+		event, err := serializeEventWithLayout(w.cfg.Layout, ev)
+		if err != nil {
+			return err
+		}
 
-	reqBody, err := json.Marshal(map[string]string{
-		"summary": "event",
-		"text":    string([]byte(output)),
-	})
-	if err != nil {
-		return err
+		var eventData map[string]interface{}
+		json.Unmarshal([]byte(event), &eventData)
+		output := fmt.Sprintf("Event: %s \nStatus: %s \nMetadata: %s", eventData["message"], eventData["reason"], eventData["metadata"])
+
+		reqBody, err = json.Marshal(map[string]string{
+			"summary": "event",
+			"text":    string([]byte(output)),
+		})
+		if err != nil {
+			return err
+		}
+	} else {
+		buf := new(bytes.Buffer)
+		err := w.cfg.messageTmpl.Execute(buf, ev)
+		if err != nil {
+			return err
+		}
+		reqBody = buf.Bytes()
 	}
 
 	req, err := http.NewRequest(http.MethodPost, w.cfg.Endpoint, bytes.NewReader(reqBody))
